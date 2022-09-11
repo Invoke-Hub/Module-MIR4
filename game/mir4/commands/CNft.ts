@@ -53,6 +53,8 @@ export abstract class CNft {
         @SlashChoice({ name: "Highest PS", value: "pshigh" })
         @SlashOption({ name: "sort", description: "Sort by?", required: false })
         sort: string = "latest",
+        @SlashOption({ name: "name", description: "Whats the character name", required: false })
+        name: string = "",
         interaction: CommandInteraction
     ): Promise<void> {
         await interaction.deferReply()
@@ -84,6 +86,9 @@ export abstract class CNft {
             if (minimumprice && nft.price > minimumprice)
                 return false;
 
+            if (name && !nft.characterName.includes(name))
+                return false;
+
             return true
         }).sort((nft1: List, nft2: List) => {
             switch (sort) {
@@ -102,6 +107,11 @@ export abstract class CNft {
             }
             return 1;
         });
+
+        if (!nfts.length) {
+            interaction.followUp("No results found.")
+            return;
+        }
 
         new Pagination(interaction, paginate(interaction, nfts, {
             listType: "sale",
