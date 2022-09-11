@@ -1,6 +1,6 @@
 import { CommandInteraction } from "discord.js";
 import { Discord, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx";
-import { Pagination, PaginationType,} from "@discordx/pagination";
+import { Pagination, PaginationType } from "@discordx/pagination";
 import type { MessageOptions } from "discord.js";
 import { INft, List } from "../interfaces/INft.js";
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
@@ -8,18 +8,18 @@ import CRetrieveNft from "../controllers/CRetrieveNft.js";
 import fs from "fs";
 
 /**
- * A class that retrieves the valorant agent profile
+ * A class that retrieves the mir4 nft data
  *
  * @author  Devitrax
- * @version 1.0, 03/08/22
+ * @version 1.0, 11/09/22
  */
 @Discord()
-@SlashGroup({ description: "Displays the valorant profile", name: "mir4" })
+@SlashGroup({ description: "Displays mir4 nft base from filter", name: "mir4" })
 @SlashGroup("mir4")
 export abstract class CNft {
 
     /**
-     * Executes the valorant agent profile embed
+     * Executes the mir4 nft search
      *
      * @param {CommandInteraction} interaction
      */
@@ -56,12 +56,12 @@ export abstract class CNft {
         interaction: CommandInteraction
     ): Promise<void> {
         await interaction.deferReply()
-        
+
         let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users.json`, 'utf-8');
         let data = JSON.parse(file.toString());
         let nfts: List[] = data as List[];
 
-        nfts = nfts.filter((nft:List) => {
+        nfts = nfts.filter((nft: List) => {
 
             if (playerClass && nft.class != playerClass)
                 return false
@@ -85,7 +85,7 @@ export abstract class CNft {
                 return false;
 
             return true
-        }).sort((nft1:List, nft2:List) => {
+        }).sort((nft1: List, nft2: List) => {
             switch (sort) {
                 case "latest":
                     return nft1.seq <= nft2.seq ? 1 : -1
@@ -121,7 +121,7 @@ export abstract class CNft {
     }
 
     /**
-     * Executes the valorant agent profile embed
+     * Executes mir4 nft data retrieve
      *
      * @param {CommandInteraction} interaction
      */
@@ -151,6 +151,14 @@ export abstract class CNft {
     }
 }
 
+/**
+ * Executes mir4 nft data retrieve
+ *
+ * @param {CommandInteraction} interaction
+ * @param {List[]} nfts
+ * @param {INft} nft
+ * @return {MessageOptions[]} returns a paginated message options
+ */
 export function paginate(interaction: CommandInteraction, nfts: List[], nft: INft): MessageOptions[] {
     let totalPages: number = Math.ceil(nfts.length / 9);
 

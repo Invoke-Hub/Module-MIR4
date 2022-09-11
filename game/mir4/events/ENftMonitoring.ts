@@ -6,16 +6,16 @@ import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmb
 import fs from "fs";
 
 /**
- * A event representing the crypto process
+ * A event representing the nft retrieve process
  *
  * @author  Devitrax
- * @version 1.0, 03/08/22
+ * @version 1.0, 11/09/22
  */
 @Discord()
 export abstract class ENftMonitoring {
-    
+
     /**
-     * An event that triggers on bot ready retrieving the currency
+     * An event that triggers on bot ready retrieving the nft characters
      *
      * @param {ArgsOf} member
      * @param {Client} client
@@ -39,9 +39,8 @@ export abstract class ENftMonitoring {
                 interaction: null
             })).fetch(false).then((data: List[]) => {
                 fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users.json`, JSON.stringify(data));
-                
             })
         }, 60000);
-        
+
     }
 }

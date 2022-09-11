@@ -9,7 +9,7 @@ import MNft from "../models/MNft.js";
  * A class representing the mir4 nft retrieve controller
  *
  * @author  Devitrax
- * @version 1.0, 03/08/22
+ * @version 1.0, 11/09/22
  */
 export default class CRetrieveNft extends MNft {
 
@@ -25,9 +25,10 @@ export default class CRetrieveNft extends MNft {
     }
 
     /**
-     * Totals the stats of player in all games
+     * Retrieves all nft from all pages
      *
-     * @return {Promise<this>} returns the valorant utility
+     * @param {boolean} nofity
+     * @return {Promise<List[]>} returns the nft characters
      */
     async fetch(notify: boolean): Promise<List[]> {
         let data: List[] = [];
@@ -77,9 +78,12 @@ export default class CRetrieveNft extends MNft {
     }
 
     /**
-     * Totals the stats of player in all games
+     * Distributes and creates an embed of the nfts
+     *
+     * @param {List[]} nfts
+     * @return {CEmbedBuilder} returns the embed builder
      */
-    execute(nfts: List[]) : CEmbedBuilder {
+    execute(nfts: List[]): CEmbedBuilder {
         let totalPages: number = Math.ceil(nfts.length / 9);
         this._embed.description = `These were the nfts from MIR4. These are sorted according to: ${this.sort} as of ${new Date().toUTCString()}`;
         this.searchResult(this._embed)
@@ -95,7 +99,7 @@ export default class CRetrieveNft extends MNft {
             value: "```SEARCH RESULT```",
             inline: false
         })
-            
+
         nfts.slice((this.page - 1) * 9, this.page * 9).forEach((nft: List) => {
             this._embed.addFields({
                 name: `${nft.characterName} - ${this.className(nft.class)}${this.classIcon(nft.class)}`,

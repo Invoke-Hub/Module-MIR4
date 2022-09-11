@@ -2,10 +2,10 @@ import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmb
 import { INft } from "../interfaces/INft";
 
 /**
- * A class representing the valorant model
+ * A class representing the mir4 model
  *
  * @author  Devitrax
- * @version 1.0, 03/08/22
+ * @version 1.0, 11/09/22
  */
 export default class MNft {
 
@@ -46,7 +46,7 @@ export default class MNft {
     public get powerMin(): number {
         return this._nft.powerMin
     }
-    
+
     public get powerMax(): number {
         return this._nft.powerMax
     }
@@ -75,6 +75,12 @@ export default class MNft {
         return this._nft.languageCode
     }
 
+    /**
+     * Retrieves class name
+     *
+     * @param {number} classId
+     * @return {string} class name for embed
+     */
     className(classId: number): string {
         switch (classId) {
             case 1: return "Warrior"
@@ -85,6 +91,12 @@ export default class MNft {
         }
     }
 
+    /**
+     * Retrieves class emoji
+     *
+     * @param {number} classId
+     * @return {string} class emoji for embed
+     */
     classIcon(classId: number): string {
         switch (classId) {
             case 1: return "<:MIR4Warrior:1018060984126013472>"
@@ -95,6 +107,11 @@ export default class MNft {
         }
     }
 
+    /**
+     * Generates search criteria embed
+     *
+     * @param {CEmbedBuilder} embed
+     */
     searchResult(embed: CEmbedBuilder) {
         embed.addFields({
             name: "ㅤ",
@@ -105,32 +122,32 @@ export default class MNft {
         Object.entries(this._nft).forEach(entry => {
             let [key, value] = entry
             switch (key) {
-                case "listType": 
+                case "listType":
                     key = "List Type";
                     break;
-                case "class": 
+                case "class":
                     key = "Class";
                     value = this.className(value)
                     break;
-                case "levMin": 
+                case "levMin":
                     key = "Minimum Level";
                     break;
-                case "levMax": 
+                case "levMax":
                     key = "Maximum Level";
                     break;
-                case "powerMin": 
+                case "powerMin":
                     key = "Minimum PS";
                     break;
-                case "powerMax": 
+                case "powerMax":
                     key = "Maximum PS";
                     break;
-                case "priceMin": 
+                case "priceMin":
                     key = "Minimum Price";
                     break;
                 case "priceMax":
                     key = "Maximum Price";
                     break;
-                case "sort": 
+                case "sort":
                     key = "Sort";
                     break;
                 default: return;
@@ -145,11 +162,10 @@ export default class MNft {
     }
 
     /**
-    * URL Generator
-    *
-    * @param {APIResponse} response the response of the api
-    * @return {string} response status translation
-    */
+     * Generates a url base from the request
+     *
+     * @return {string} response status translation
+     */
     requestList(): string {
         let data = {
             listType: this.listType,
@@ -164,7 +180,7 @@ export default class MNft {
             page: this.page,
             languageCode: this.languageCode
         }
-        
+
         let query = Object.entries(data).map(([key, val]) => `${key}=${val}`).join('&');
         return `${this._listUrl}?${query}`;
     }

@@ -2,7 +2,7 @@
  * A interface representing mir4 nft properties
  *
  * @author  Devitrax
- * @version 1.0 03/08/22
+ * @version 1.0, 11/09/22
  */
 export interface Stat {
     statName: string;
