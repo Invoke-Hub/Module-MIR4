@@ -1,3 +1,7 @@
+import { CommandInteraction } from "discord.js";
+import { Spirits } from "./ISpirit";
+import { Stats } from "./IStats";
+
 /**
  * A interface representing mir4 nft properties
  *
@@ -24,6 +28,8 @@ export interface List {
     MiraX: number;
     Reinforce: number;
     stat: Stat[];
+    spirits: Spirits;
+    stats: Stats;
 }
 
 export interface Data {
@@ -49,5 +55,9 @@ export interface INft {
     priceMax: number
     sort: string
     page: number
-    languageCode: string
+    languageCode: string,
+    interaction?: CommandInteraction,
+    name?: string
+    skills?: string[]
+    spirits?: string[]
 }

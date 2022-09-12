@@ -1,9 +1,12 @@
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
 import CLogger from "../../../main/utilities/logbuilder/controllers/CLogBuilder.js";
-import { AttachmentBuilder } from "discord.js";
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, MessageActionRowComponentBuilder } from "discord.js";
 import { INft, List, RootObject } from "../interfaces/INft.js";
 import axios, { AxiosResponse } from "axios";
 import MNft from "../models/MNft.js";
+import { Spirit, SpiritObject } from "../interfaces/ISpirit.js";
+import { StatsObject } from "../interfaces/IStats.js";
+import fs from "fs";
 
 /**
  * A class representing the mir4 nft retrieve controller
@@ -34,29 +37,59 @@ export default class CRetrieveNft extends MNft {
         let data: List[] = [];
 
         await axios
-            .get(this.requestList())
+            .get(this.requestList("list"))
             .then(async (response: AxiosResponse) => {
 
                 let nfts: RootObject = response.data as RootObject
                 let totalPages: number = Math.ceil(nfts.data.totalCount / 20);
 
                 for (let i = 1; i <= totalPages; i++) {
-                    // console.log(`Retrieving: ${i} / ${totalPages}`)
+                    console.log(`${i} of ${totalPages}`)
+
                     this.page = i;
-                    await axios
-                        .get(this.requestList())
-                        .then((response: AxiosResponse) => {
-                            if (response.status != 200) {
-                                CLogger.error(`Retrieve Nft site is currently down.`)
-                                return
-                            }
 
-                            let nfts: RootObject = response.data as RootObject
-                            data = data.concat(nfts.data.lists);
+                    await this.requestData(this.requestList("list")).then(async response => {
+                        let root: RootObject = response.data as RootObject
 
-                        }).catch(error => {
-                            CLogger.error(`Unable to retrieve NFT, site is probably down.`)
-                        })
+                        root.data.lists.forEach(async (nft: List) => {
+
+                            await this.requestData(this.requestList("spirit", nft.transportID)).then(response => {
+                                let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/spirits.json`, 'utf-8');
+                                let data = null;
+
+                                let modifiedSpirits: Spirit[] = [];
+                                let oldSpirits: Spirit[] = [];
+
+                                try {
+                                    data = JSON.parse(file.toString());
+                                    modifiedSpirits = data as Spirit[];
+                                    oldSpirits = Object.assign(oldSpirits, modifiedSpirits)
+                                } catch (e) {
+                                    data = null;
+                                }
+
+                                let spirit: SpiritObject = response.data as SpiritObject
+                                nft.spirits = spirit.data;
+
+                                spirit.data.inven.forEach(spirit => {
+                                    if (!modifiedSpirits.some(cacheSpirit => cacheSpirit.petName === spirit.petName))
+                                        modifiedSpirits.push(spirit)
+                                });
+
+                                if (JSON.stringify(modifiedSpirits) != JSON.stringify(oldSpirits)) {
+                                    fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/spirits.json`, JSON.stringify(modifiedSpirits));
+                                }
+                            })
+
+                            await this.requestData(this.requestList("stats", nft.transportID)).then(response => {
+                                let stats: StatsObject = response.data as StatsObject
+                                nft.stats = stats.data;
+                            })
+
+                        });
+
+                        data = data.concat(root.data.lists);
+                    })
                 }
 
                 if (notify) {
@@ -107,6 +140,22 @@ export default class CRetrieveNft extends MNft {
                 inline: true
             })
         })
+
+        let skillBtn = new ButtonBuilder()
+            .setLabel("Search Skill")
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId("searchskill");
+
+        let spiritBtn = new ButtonBuilder()
+            .setLabel("Search Spirit")
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId("searchspirit");
+
+        let row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+            skillBtn, spiritBtn
+        );
+
+        this._embed.components = [row];
 
         return this._embed
     }

@@ -1,8 +1,9 @@
-import { CommandInteraction } from "discord.js";
-import { Discord, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx";
+import { ActionRowBuilder, ButtonInteraction, CommandInteraction, MessageActionRowComponentBuilder, ModalBuilder, RestOrArray, SelectMenuBuilder, SelectMenuComponentOptionData, SelectMenuInteraction, TextInputBuilder, TextInputStyle } from "discord.js";
+import { ButtonComponent, Discord, SelectMenuComponent, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx";
 import { Pagination, PaginationType } from "@discordx/pagination";
 import type { MessageOptions } from "discord.js";
 import { INft, List } from "../interfaces/INft.js";
+import { Spirit } from "../interfaces/ISpirit.js";
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
 import CRetrieveNft from "../controllers/CRetrieveNft.js";
 import fs from "fs";
@@ -17,6 +18,31 @@ import fs from "fs";
 @SlashGroup({ description: "Displays mir4 nft base from filter", name: "mir4" })
 @SlashGroup("mir4")
 export abstract class CNft {
+
+    private _filter: INft = {
+        listType: "sale",
+        class: 0,
+        levMin: 0,
+        levMax: 0,
+        powerMin: 0,
+        powerMax: 0,
+        priceMin: 0,
+        priceMax: 0,
+        sort: "latest",
+        page: 1,
+        languageCode: "en",
+        name: "",
+        skills: [],
+        spirits: []
+    }
+
+    public get filter(): INft {
+        return this._filter
+    }
+
+    public set filter(filter) {
+        this._filter = filter
+    }
 
     /**
      * Executes the mir4 nft search
@@ -59,39 +85,131 @@ export abstract class CNft {
     ): Promise<void> {
         await interaction.deferReply()
 
-        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users.json`, 'utf-8');
+        this.filter.class = playerClass;
+        this.filter.levMin = minimumLevel;
+        this.filter.levMax = maximumlevel;
+        this.filter.powerMin = minimumps;
+        this.filter.powerMax = maximumps;
+        this.filter.priceMin = minimumprice;
+        this.filter.priceMax = maximumprice;
+        this.filter.sort = sort;
+        this.filter.interaction = interaction;
+        this.filter.name = name;
+
+        this.createFilter()
+    }
+
+    /**
+     * Executes mir4 nft data retrieve
+     *
+     * @param {CommandInteraction} interaction
+     */
+    @Slash({ name: "cache", description: "Displays mir4 nft list" })
+    async cache(
+        interaction: CommandInteraction
+    ): Promise<void> {
+        await interaction.deferReply()
+
+        new CRetrieveNft(this.filter, new CEmbedBuilder({
+            interaction: interaction
+        })).fetch(true).then((data: List[]) => {
+            fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users/en.json`, JSON.stringify(data));
+        })
+    }
+
+    /**
+     * Creates a select menu of spirits
+     *
+     * @param {CommandInteraction} interaction
+     */
+    @ButtonComponent({ id: "searchspirit" })
+    spiritHandler(
+        interaction: ButtonInteraction
+    ): void {
+        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/spirits.json`, 'utf-8');
+        let data = JSON.parse(file.toString());
+        let spirits = data as Spirit[];
+
+        const menu = new SelectMenuBuilder()
+            .setPlaceholder("Select Spirits to Add")
+            .setCustomId("spirit-select-menu");
+
+        spirits.filter(spirit => spirit.grade > 3).forEach(spirit => {
+            menu.addOptions({
+                label: spirit.petName,
+                value: spirit.petName.trim()
+            })
+        });
+
+        const buttonRow = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+            menu
+        );
+
+        interaction.reply({
+            components: [buttonRow],
+        });
+    }
+
+    /**
+     * Response for spirit select menu
+     *
+     * @param {SelectMenuInteraction} interaction
+     */
+    @SelectMenuComponent({ id: "spirit-select-menu" })
+    async spiritMenuHandle(
+        interaction: SelectMenuInteraction
+    ): Promise<unknown> {
+        await interaction.deferReply();
+
+        const spirit = interaction.values?.[0];
+        if (!spirit) {
+            return interaction.followUp("invalid role id, select again");
+        }
+
+        this.filter.spirits?.push(spirit);
+        this.createFilter()
+    }
+
+    /**
+     * Creates search criteria
+     */
+    createFilter() {
+        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users/en.json`, 'utf-8');
         let data = JSON.parse(file.toString());
         let nfts: List[] = data as List[];
 
         nfts = nfts.filter((nft: List) => {
 
-            if (playerClass && nft.class != playerClass)
+            if (this.filter.class && nft.class != this.filter.class)
                 return false
 
-            if (minimumLevel && nft.lv < minimumLevel)
+            if (this.filter.levMin && nft.lv < this.filter.levMin)
                 return false;
 
-            if (maximumlevel && nft.lv > maximumlevel)
+            if (this.filter.levMax && nft.lv > this.filter.levMax)
                 return false;
 
-            if (minimumps && nft.powerScore < minimumps)
+            if (this.filter.powerMin && nft.powerScore < this.filter.powerMin)
                 return false;
 
-            if (maximumps && nft.powerScore > maximumps)
+            if (this.filter.powerMax && nft.powerScore > this.filter.powerMax)
                 return false;
 
-            if (minimumprice && nft.price < minimumprice)
+            if (this.filter.priceMin && nft.price < this.filter.priceMin)
                 return false;
 
-            if (minimumprice && nft.price > minimumprice)
+            if (this.filter.priceMax && nft.price > this.filter.priceMax)
                 return false;
 
-            if (name && !nft.characterName.includes(name))
+            if (this.filter.name && !nft.characterName.includes(this.filter.name))
+                return false;
+
+            if (this.filter.spirits?.length && nft.spirits && !this.filter.spirits?.every(spirit => nft.spirits.inven.map(owned => owned.petName).includes(spirit)))
                 return false;
 
             return true
         }).sort((nft1: List, nft2: List) => {
-            switch (sort) {
+            switch (this.filter.sort) {
                 case "latest":
                     return nft1.seq <= nft2.seq ? 1 : -1
                 case "oldest":
@@ -108,56 +226,18 @@ export abstract class CNft {
             return 1;
         });
 
-        if (!nfts.length) {
-            interaction.followUp("No results found.")
+        if (!this.filter.interaction) {
             return;
         }
 
-        new Pagination(interaction, paginate(interaction, nfts, {
-            listType: "sale",
-            class: playerClass,
-            levMin: minimumLevel,
-            levMax: maximumlevel,
-            powerMin: minimumps,
-            powerMax: maximumps,
-            priceMin: minimumprice,
-            priceMax: maximumprice,
-            sort: sort,
-            page: 1,
-            languageCode: "en"
-        }), {
+        if (!nfts.length) {
+            this.filter.interaction.followUp("No results found.")
+            return;
+        }
+
+        new Pagination(this.filter.interaction, paginate(this.filter.interaction, nfts, this.filter), {
             type: PaginationType.SelectMenu,
         }).send();
-    }
-
-    /**
-     * Executes mir4 nft data retrieve
-     *
-     * @param {CommandInteraction} interaction
-     */
-    @Slash({ name: "cache", description: "Displays mir4 nft list" })
-    async cache(
-        interaction: CommandInteraction
-    ): Promise<void> {
-        await interaction.deferReply()
-
-        new CRetrieveNft({
-            listType: "sale",
-            class: 0,
-            levMin: 0,
-            levMax: 0,
-            powerMin: 0,
-            powerMax: 0,
-            priceMin: 0,
-            priceMax: 0,
-            sort: "latest",
-            page: 1,
-            languageCode: "en"
-        }, new CEmbedBuilder({
-            interaction: interaction
-        })).fetch(true).then((data: List[]) => {
-            fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users.json`, JSON.stringify(data));
-        })
     }
 }
 
@@ -182,6 +262,7 @@ export function paginate(interaction: CommandInteraction, nfts: List[], nft: INf
     return pages.map((page) => {
         return {
             embeds: [page],
+            components: page.components,
             files: page.files
         };
     });

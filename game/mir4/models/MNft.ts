@@ -1,5 +1,6 @@
+import axios, { AxiosResponse } from "axios";
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder";
-import { INft } from "../interfaces/INft";
+import { INft, RootObject } from "../interfaces/INft";
 
 /**
  * A class representing the mir4 model
@@ -14,6 +15,10 @@ export default class MNft {
     private readonly _listUrl: string = "https://webapi.mir4global.com/nft/lists"
 
     private readonly _profileUrl: string = "https://www.xdraco.com/nft/trade/"
+
+    private readonly _spiritUrl: string = "https://webapi.mir4global.com/nft/character/spirit"
+
+    private readonly _statsUrl: string = "https://webapi.mir4global.com/nft/character/stats"
 
     constructor(nft: INft) {
         this._nft = nft
@@ -73,6 +78,10 @@ export default class MNft {
 
     public get languageCode(): string {
         return this._nft.languageCode
+    }
+
+    async requestData(url: string) {
+        return await axios.get(url)
     }
 
     /**
@@ -166,23 +175,44 @@ export default class MNft {
      *
      * @return {string} response status translation
      */
-    requestList(): string {
-        let data = {
-            listType: this.listType,
-            class: this.class,
-            levMin: this.levMin,
-            levMax: this.levMax,
-            powerMin: this.powerMin,
-            powerMax: this.powerMax,
-            priceMin: this.priceMin,
-            priceMax: this.priceMax,
-            sort: this.sort,
-            page: this.page,
-            languageCode: this.languageCode
+    requestList(mode: string, transportID: number = 0): string {
+        let data: any;
+        switch (mode) {
+            case "spirit":
+                data = {
+                    transportID: transportID,
+                    languageCode: this.languageCode,
+                    url: this._spiritUrl
+                }
+                break;
+            case "stats":
+                data = {
+                    transportID: transportID,
+                    languageCode: this.languageCode,
+                    url: this._statsUrl
+                }
+                break;
+            default:
+                data = {
+                    listType: this.listType,
+                    class: this.class,
+                    levMin: this.levMin,
+                    levMax: this.levMax,
+                    powerMin: this.powerMin,
+                    powerMax: this.powerMax,
+                    priceMin: this.priceMin,
+                    priceMax: this.priceMax,
+                    sort: this.sort,
+                    page: this.page,
+                    languageCode: this.languageCode,
+                    url: this._listUrl
+                }
+                break;
+
         }
 
-        let query = Object.entries(data).map(([key, val]) => `${key}=${val}`).join('&');
-        return `${this._listUrl}?${query}`;
+        let query = Object.entries(data).filter(([key]) => key != "url").map(([key, val]) => `${key}=${val}`).join('&');
+        return `${data.url}?${query}`;
     }
 
 }

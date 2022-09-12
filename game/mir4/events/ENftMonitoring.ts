@@ -38,7 +38,7 @@ export abstract class ENftMonitoring {
             }, new CEmbedBuilder({
                 interaction: null
             })).fetch(false).then((data: List[]) => {
-                fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users.json`, JSON.stringify(data));
+                fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users/en.json`, JSON.stringify(data));
             })
         }, 60000);
 
