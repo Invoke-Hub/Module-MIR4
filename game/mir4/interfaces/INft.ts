@@ -1,4 +1,5 @@
 import { CommandInteraction } from "discord.js";
+import { Skill } from "./ISkill";
 import { Spirits } from "./ISpirit";
 import { Stats } from "./IStats";
 
@@ -29,6 +30,7 @@ export interface List {
     Reinforce: number;
     stat: Stat[];
     spirits: Spirits;
+    skills: Skill[];
     stats: Stats;
 }
 
@@ -60,4 +62,5 @@ export interface INft {
     name?: string
     skills?: string[]
     spirits?: string[]
+    url?: string
 }

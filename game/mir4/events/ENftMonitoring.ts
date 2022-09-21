@@ -1,9 +1,7 @@
 import type { ArgsOf } from "discordx";
 import { Discord, On, Client } from "discordx";
-import { List } from "../interfaces/INft";
 import CRetrieveNft from "../controllers/CRetrieveNft.js";
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
-import fs from "fs";
 
 /**
  * A event representing the nft retrieve process
@@ -37,10 +35,10 @@ export abstract class ENftMonitoring {
                 languageCode: "en"
             }, new CEmbedBuilder({
                 interaction: null
-            })).fetch(false).then((data: List[]) => {
-                fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/users/en.json`, JSON.stringify(data));
+            })).fetch(false).catch(error => {
+                console.log(error)
             })
-        }, 60000);
+        }, 60000 * 5)
 
     }
 }

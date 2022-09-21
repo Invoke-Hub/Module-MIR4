@@ -1,6 +1,15 @@
+/**
+ * A interface representing mir4 nft properties
+ *
+ * @author  Devitrax
+ * @version 1.0, 11/09/22
+ */
+export interface Skill {
+    skillLevel: number;
+    skillName: string;
+}
+
 export interface SkillObject {
-    name: string;
-    class: string;
-    createdAt: Date;
-    updatedAt: Date;
+    code: number;
+    data: Skill[];
 }

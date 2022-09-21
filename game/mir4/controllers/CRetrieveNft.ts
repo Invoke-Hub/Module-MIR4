@@ -1,12 +1,7 @@
-import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
-import CLogger from "../../../main/utilities/logbuilder/controllers/CLogBuilder.js";
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, MessageActionRowComponentBuilder } from "discord.js";
-import { INft, List, RootObject } from "../interfaces/INft.js";
-import axios, { AxiosResponse } from "axios";
-import MNft from "../models/MNft.js";
-import { Spirit, SpiritObject } from "../interfaces/ISpirit.js";
-import { StatsObject } from "../interfaces/IStats.js";
-import fs from "fs";
+import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder } from "discord.js"
+import { INft, List } from "../interfaces/INft.js"
+import MNft from "../models/MNft.js"
 
 /**
  * A class representing the mir4 nft retrieve controller
@@ -18,8 +13,10 @@ export default class CRetrieveNft extends MNft {
 
     private readonly _embed: CEmbedBuilder
 
+    private readonly _builders: CEmbedBuilder[] = []
+
     constructor(nft: INft, embed: CEmbedBuilder) {
-        super(nft);
+        super(nft)
         this._embed = embed
     }
 
@@ -31,133 +28,145 @@ export default class CRetrieveNft extends MNft {
      * Retrieves all nft from all pages
      *
      * @param {boolean} nofity
-     * @return {Promise<List[]>} returns the nft characters
      */
-    async fetch(notify: boolean): Promise<List[]> {
-        let data: List[] = [];
-
-        await axios
-            .get(this.requestList("list"))
-            .then(async (response: AxiosResponse) => {
-
-                let nfts: RootObject = response.data as RootObject
-                let totalPages: number = Math.ceil(nfts.data.totalCount / 20);
-
-                for (let i = 1; i <= totalPages; i++) {
-                    console.log(`${i} of ${totalPages}`)
-
-                    this.page = i;
-
-                    await this.requestData(this.requestList("list")).then(async response => {
-                        let root: RootObject = response.data as RootObject
-
-                        root.data.lists.forEach(async (nft: List) => {
-
-                            await this.requestData(this.requestList("spirit", nft.transportID)).then(response => {
-                                let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/spirits.json`, 'utf-8');
-                                let data = null;
-
-                                let modifiedSpirits: Spirit[] = [];
-                                let oldSpirits: Spirit[] = [];
-
-                                try {
-                                    data = JSON.parse(file.toString());
-                                    modifiedSpirits = data as Spirit[];
-                                    oldSpirits = Object.assign(oldSpirits, modifiedSpirits)
-                                } catch (e) {
-                                    data = null;
-                                }
-
-                                let spirit: SpiritObject = response.data as SpiritObject
-                                nft.spirits = spirit.data;
-
-                                spirit.data.inven.forEach(spirit => {
-                                    if (!modifiedSpirits.some(cacheSpirit => cacheSpirit.petName === spirit.petName))
-                                        modifiedSpirits.push(spirit)
-                                });
-
-                                if (JSON.stringify(modifiedSpirits) != JSON.stringify(oldSpirits)) {
-                                    fs.writeFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/spirits.json`, JSON.stringify(modifiedSpirits));
-                                }
-                            })
-
-                            await this.requestData(this.requestList("stats", nft.transportID)).then(response => {
-                                let stats: StatsObject = response.data as StatsObject
-                                nft.stats = stats.data;
-                            })
-
-                        });
-
-                        data = data.concat(root.data.lists);
-                    })
-                }
-
-                if (notify) {
-                    this._embed.files = [new AttachmentBuilder(`${process.cwd()}/src/modules/game/mir4/resources/images/banner.gif`, { name: 'profile-image.gif' })]
-                    this._embed
-                        .setTitle(`MIR4 NFT Retrieve`)
-                        .setDescription("Fetched " + nfts.data.totalCount + " NFTs as of " + new Date().toUTCString() + ", CRON will run again after 30 minutes.")
-                        .setImage('attachment://profile-image.gif')
-                        .setFooter({ text: `${new Date().toUTCString()}` })
-                        .setColor("Green")
-                }
-
-            }).catch(error => {
-                console.log(error);
-                CLogger.error(`Unable to retrieve NFT, site is probably down.`)
-            })
-
-        return data
+    async fetch(notify: boolean): Promise<void> {
+        this.retrieve({
+            listType: this.listType,
+            class: this.class,
+            levMin: this.levMin,
+            levMax: this.levMax,
+            powerMin: this.powerMin,
+            powerMax: this.powerMax,
+            priceMin: this.priceMin,
+            priceMax: this.priceMax,
+            sort: this.sort,
+            page: this.page,
+            languageCode: this.languageCode,
+            url: this.listUrl
+        }, this.embed, notify)
     }
 
     /**
      * Distributes and creates an embed of the nfts
      *
      * @param {List[]} nfts
-     * @return {CEmbedBuilder} returns the embed builder
+     * @return {CEmbedBuilder[]} returns the embed builder
      */
-    execute(nfts: List[]): CEmbedBuilder {
-        let totalPages: number = Math.ceil(nfts.length / 9);
-        this._embed.description = `These were the nfts from MIR4. These are sorted according to: ${this.sort} as of ${new Date().toUTCString()}`;
-        this.searchResult(this._embed)
+    execute(nfts: List[]): CEmbedBuilder[] {
+        let totalPages: number = Math.ceil(nfts.length / 9)
+        let searchEmbed: CEmbedBuilder = new CEmbedBuilder(this._embed.builder)
 
-        this._embed
+        searchEmbed.description = `These were the nfts from MIR4. These are sorted according to: ${this.sort} as of ${new Date().toUTCString()}`
+        this.searchResult(searchEmbed)
+
+        searchEmbed
             .setTitle(`MIR4 NFT List`)
-            .setDescription(this._embed.description)
+            .setDescription(searchEmbed.description)
             .setFooter({ text: `Page ${this.page} of ${totalPages}` })
             .setColor("Blue")
 
-        this._embed.addFields({
+        searchEmbed.addFields({
             name: "ㅤ",
             value: "```SEARCH RESULT```",
             inline: false
         })
 
         nfts.slice((this.page - 1) * 9, this.page * 9).forEach((nft: List) => {
-            this._embed.addFields({
+            searchEmbed.addFields({
                 name: `${nft.characterName} - ${this.className(nft.class)}${this.classIcon(nft.class)}`,
                 value: "```PS: " + nft.powerScore.toLocaleString() + "``` ```WEMIX: " + nft.price.toLocaleString() + "```  ```Lvl: " + nft.lv.toLocaleString() + "``` ↘ [Open Profile](" + this.profileUrl + nft.seq + ")\n\nㅤ",
                 inline: true
             })
         })
 
-        let skillBtn = new ButtonBuilder()
-            .setLabel("Search Skill")
-            .setStyle(ButtonStyle.Primary)
-            .setCustomId("searchskill");
-
         let spiritBtn = new ButtonBuilder()
             .setLabel("Search Spirit")
             .setStyle(ButtonStyle.Primary)
-            .setCustomId("searchspirit");
+            .setCustomId("searchspirit")
 
-        let row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-            skillBtn, spiritBtn
-        );
+        let clearRow = new ActionRowBuilder<MessageActionRowComponentBuilder>()
+        let searchRow = new ActionRowBuilder<MessageActionRowComponentBuilder>()
+            .addComponents(spiritBtn)
 
-        this._embed.components = [row];
+        searchEmbed.components = [searchRow]
 
-        return this._embed
+        if (this.class != 0) {
+            searchRow.addComponents(
+                new ButtonBuilder()
+                    .setLabel("Search Skill")
+                    .setStyle(ButtonStyle.Primary)
+                    .setCustomId("searchskill")
+            )
+        }
+
+        this._builders.push(searchEmbed)
+        this.createSpiritEmbed(clearRow)
+        this.createSkillEmbed(clearRow)
+
+        if (clearRow.components.length > 0)
+            searchEmbed.components.push(clearRow)
+
+        return this._builders
+    }
+
+    /**
+     * Creats an embed of the filtered spirits
+     *
+     * @param {ActionRowBuilder<MessageActionRowComponentBuilder>} row
+     */
+    createSpiritEmbed(row: ActionRowBuilder<MessageActionRowComponentBuilder>) {
+        if (this.spirits?.length) {
+            let spiritEmbed: CEmbedBuilder = new CEmbedBuilder(this._embed.builder)
+                .setTitle("Spirit Search Criteria")
+                .setDescription("These are the selected spirits to be filtered along with your search criteria. If you wish to remove your filters simply click on reset spirits.\n\n```Selected Spirits```")
+                .setColor("Blue")
+
+            this.spirits.slice(0, 24).forEach((spirit: string) => {
+                spiritEmbed.addFields({
+                    name: `${spirit}`,
+                    value: "ㅤ",
+                    inline: true
+                })
+            })
+
+            let spiritBtn = new ButtonBuilder()
+                .setLabel("Clear Filtered Spirits")
+                .setStyle(ButtonStyle.Danger)
+                .setCustomId("clearspirit")
+
+            row.addComponents(spiritBtn)
+            this._builders.push(spiritEmbed)
+        }
+    }
+
+    /**
+     * Creats an embed of the filtered skills
+     *
+     * @param {ActionRowBuilder<MessageActionRowComponentBuilder>} row
+     */
+    createSkillEmbed(row: ActionRowBuilder<MessageActionRowComponentBuilder>) {
+        if (this.skills?.length) {
+            let skillEmbed: CEmbedBuilder = new CEmbedBuilder(this._embed.builder)
+                .setTitle("Skill Search Criteria")
+                .setDescription("These are the selected skills to be filtered along with your search criteria. If you wish to remove your filters simply click on reset skills.\n\n```Selected Skills```")
+                .setColor("Blue")
+
+            this.skills.slice(0, 24).forEach((spirit: string) => {
+                skillEmbed.addFields({
+                    name: `${spirit}`,
+                    value: "ㅤ",
+                    inline: true
+                })
+            })
+
+            let skillBtn = new ButtonBuilder()
+                .setLabel("Clear Filtered Skills")
+                .setStyle(ButtonStyle.Danger)
+                .setCustomId("clearskill")
+
+            row.addComponents(skillBtn)
+            this._builders.push(skillEmbed)
+        }
     }
 
 }

@@ -1,6 +1,10 @@
-import axios, { AxiosResponse } from "axios";
-import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder";
-import { INft, RootObject } from "../interfaces/INft";
+import axios, { AxiosResponse } from "axios"
+import { AttachmentBuilder } from "discord.js"
+import { INft, List, RootObject } from "../interfaces/INft"
+import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js"
+import fs from "fs"
+import MSkill from "./MSkill.js"
+import MSpirit from "./MSpirit.js"
 
 /**
  * A class representing the mir4 model
@@ -15,10 +19,6 @@ export default class MNft {
     private readonly _listUrl: string = "https://webapi.mir4global.com/nft/lists"
 
     private readonly _profileUrl: string = "https://www.xdraco.com/nft/trade/"
-
-    private readonly _spiritUrl: string = "https://webapi.mir4global.com/nft/character/spirit"
-
-    private readonly _statsUrl: string = "https://webapi.mir4global.com/nft/character/stats"
 
     constructor(nft: INft) {
         this._nft = nft
@@ -80,6 +80,14 @@ export default class MNft {
         return this._nft.languageCode
     }
 
+    public get spirits(): string[] | undefined {
+        return this._nft.spirits
+    }
+
+    public get skills(): string[] | undefined {
+        return this._nft.skills
+    }
+
     async requestData(url: string) {
         return await axios.get(url)
     }
@@ -132,34 +140,34 @@ export default class MNft {
             let [key, value] = entry
             switch (key) {
                 case "listType":
-                    key = "List Type";
-                    break;
+                    key = "List Type"
+                    break
                 case "class":
-                    key = "Class";
+                    key = "Class"
                     value = this.className(value)
-                    break;
+                    break
                 case "levMin":
-                    key = "Minimum Level";
-                    break;
+                    key = "Minimum Level"
+                    break
                 case "levMax":
-                    key = "Maximum Level";
-                    break;
+                    key = "Maximum Level"
+                    break
                 case "powerMin":
-                    key = "Minimum PS";
-                    break;
+                    key = "Minimum PS"
+                    break
                 case "powerMax":
-                    key = "Maximum PS";
-                    break;
+                    key = "Maximum PS"
+                    break
                 case "priceMin":
-                    key = "Minimum Price";
-                    break;
+                    key = "Minimum Price"
+                    break
                 case "priceMax":
-                    key = "Maximum Price";
-                    break;
+                    key = "Maximum Price"
+                    break
                 case "sort":
-                    key = "Sort";
-                    break;
-                default: return;
+                    key = "Sort"
+                    break
+                default: return
             }
 
             embed.addFields({
@@ -173,46 +181,71 @@ export default class MNft {
     /**
      * Generates a url base from the request
      *
+     * @param {any} data object containing url parameters
      * @return {string} response status translation
      */
-    requestList(mode: string, transportID: number = 0): string {
-        let data: any;
-        switch (mode) {
-            case "spirit":
-                data = {
-                    transportID: transportID,
-                    languageCode: this.languageCode,
-                    url: this._spiritUrl
-                }
-                break;
-            case "stats":
-                data = {
-                    transportID: transportID,
-                    languageCode: this.languageCode,
-                    url: this._statsUrl
-                }
-                break;
-            default:
-                data = {
-                    listType: this.listType,
-                    class: this.class,
-                    levMin: this.levMin,
-                    levMax: this.levMax,
-                    powerMin: this.powerMin,
-                    powerMax: this.powerMax,
-                    priceMin: this.priceMin,
-                    priceMax: this.priceMax,
-                    sort: this.sort,
-                    page: this.page,
-                    languageCode: this.languageCode,
-                    url: this._listUrl
-                }
-                break;
+    requestList(data: any): string {
+        let query = Object.entries(data).filter(([key]) => key != "url").map(([key, val]) => `${key}=${val}`).join('&')
+        return `${data.url}?${query}`
+    }
 
-        }
+    /**
+     * Retrieves data from MIR4
+     *
+     * @param {INft} filter applied filters
+     * @param {CEmbedBuilder} embed embed builder
+     * @param {boolean} notify flag to send embed
+     * @return {string} response status translation
+     */
+    async retrieve(filter: INft, embed: CEmbedBuilder, notify: boolean): Promise<void> {
+        let data: List[] = []
 
-        let query = Object.entries(data).filter(([key]) => key != "url").map(([key, val]) => `${key}=${val}`).join('&');
-        return `${data.url}?${query}`;
+        await axios
+            .get(this.requestList(filter))
+            .then(async (response: AxiosResponse) => {
+
+                let nfts: RootObject = response.data as RootObject
+                let totalPages: number = Math.ceil(nfts.data.totalCount / 20)
+
+                let spiritModule: MSpirit = new MSpirit(this)
+                let skillModule: MSkill = new MSkill(this)
+
+                for (let i = 1; i <= totalPages; i++) {
+                    console.log(`${i} of ${totalPages}`)
+                    filter.page = i
+
+                    await this.requestData(this.requestList(filter)).then(async response => {
+                        let root: RootObject = response.data as RootObject
+
+                        root.data.lists.forEach(async (nft: List) => {
+                            spiritModule.load(nft)
+                            skillModule.load(nft)
+                        })
+
+                        data = data.concat(root.data.lists)
+                    })
+                }
+
+                if (notify) {
+                    embed.files = [new AttachmentBuilder(`${process.cwd()}/src/modules/game/mir4/resources/images/banner.gif`, { name: 'profile-image.gif' })]
+                    embed
+                        .setTitle(`MIR4 NFT Retrieve`)
+                        .setDescription("Fetched " + nfts.data.totalCount + " NFTs as of " + new Date().toUTCString() + ", CRON will run again after 5 minutes.")
+                        .setImage('attachment://profile-image.gif')
+                        .setFooter({ text: `${new Date().toUTCString()}` })
+                        .setColor("Green")
+                        .sendMessage()
+                }
+
+            }).catch(error => {
+                console.log(error)
+            })
+
+        let path: string = `${process.cwd()}/src/modules/game/mir4/resources/data/users/Players-${this.languageCode}.json`;
+        if (!fs.existsSync(path))
+            fs.createWriteStream(path);
+
+        fs.writeFileSync(path, JSON.stringify(data))
     }
 
 }
