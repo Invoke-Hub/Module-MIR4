@@ -20,6 +20,9 @@ export abstract class ENftMonitoring {
      */
     @On({ event: "ready" })
     onReady([member]: ArgsOf<"ready">, client: Client) {
+        if (client.user?.id != process.env.BOT_ID1)
+            return;
+
         setInterval(function () {
             new CRetrieveNft({
                 listType: "sale",
