@@ -41,7 +41,7 @@ export abstract class ENftMonitoring {
             })).fetch(false).catch(error => {
                 console.log(error)
             })
-        }, 60000 * 5)
+        }, 60000 * 30)
 
     }
 }

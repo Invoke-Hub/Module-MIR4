@@ -1,12 +1,12 @@
-import { ActionRowBuilder, ButtonInteraction, CommandInteraction, MessageActionRowComponentBuilder, ModalBuilder, RestOrArray, SelectMenuBuilder, SelectMenuComponentOptionData, SelectMenuInteraction, TextInputBuilder, TextInputStyle } from "discord.js"
+import { ActionRowBuilder, ApplicationCommandOptionType, ButtonInteraction, CommandInteraction, MessageActionRowComponentBuilder, SelectMenuBuilder, SelectMenuInteraction } from "discord.js"
 import { ButtonComponent, Discord, SelectMenuComponent, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx"
 import { Pagination, PaginationType } from "@discordx/pagination"
-import type { MessageOptions } from "discord.js"
 import { INft, List } from "../interfaces/INft.js"
 import { Spirit } from "../interfaces/ISpirit.js"
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js"
 import CRetrieveNft from "../controllers/CRetrieveNft.js"
-import fs from "fs"
+import * as fs from 'fs';
+import type { BaseMessageOptions } from "discord.js";
 import { Skill } from "../interfaces/ISkill.js"
 import MNft from "../models/MNft.js"
 
@@ -59,19 +59,19 @@ export abstract class CNft {
         @SlashChoice({ name: "Taoist", value: 3 })
         @SlashChoice({ name: "Arbalist", value: 4 })
         @SlashChoice({ name: "Lancer", value: 5 })
-        @SlashOption({ name: "class", description: "Which class to filter?", required: false })
+        @SlashOption({ name: "class", description: "Which class to filter?", required: false, type: ApplicationCommandOptionType.Integer })
         playerClass: number = 0,
-        @SlashOption({ name: "minimumlevel", description: "Whats the minimum level", required: false })
+        @SlashOption({ name: "minimumlevel", description: "Whats the minimum level", required: false, type: ApplicationCommandOptionType.Integer })
         minimumLevel: number = 0,
-        @SlashOption({ name: "maximumlevel", description: "Whats the maximum level", required: false })
+        @SlashOption({ name: "maximumlevel", description: "Whats the maximum level", required: false, type: ApplicationCommandOptionType.Integer })
         maximumlevel: number = 0,
-        @SlashOption({ name: "minimumps", description: "Whats the minimum power score", required: false })
+        @SlashOption({ name: "minimumps", description: "Whats the minimum power score", required: false, type: ApplicationCommandOptionType.Integer })
         minimumps: number = 0,
-        @SlashOption({ name: "maximumps", description: "Whats the maximum power score", required: false })
+        @SlashOption({ name: "maximumps", description: "Whats the maximum power score", required: false, type: ApplicationCommandOptionType.Integer })
         maximumps: number = 0,
-        @SlashOption({ name: "minimumprice", description: "Whats the minimum price", required: false })
+        @SlashOption({ name: "minimumprice", description: "Whats the minimum price", required: false, type: ApplicationCommandOptionType.Integer })
         minimumprice: number = 0,
-        @SlashOption({ name: "maximumprice", description: "Whats the maximum price", required: false })
+        @SlashOption({ name: "maximumprice", description: "Whats the maximum price", required: false, type: ApplicationCommandOptionType.Integer })
         maximumprice: number = 0,
         @SlashChoice({ name: "Latest", value: "latest" })
         @SlashChoice({ name: "Oldest", value: "oldest" })
@@ -79,9 +79,9 @@ export abstract class CNft {
         @SlashChoice({ name: "Lowest Price", value: "pricelow" })
         @SlashChoice({ name: "Highest Level", value: "lvhigh" })
         @SlashChoice({ name: "Highest PS", value: "pshigh" })
-        @SlashOption({ name: "sort", description: "Sort by?", required: false })
+        @SlashOption({ name: "sort", description: "Sort by?", required: false, type: ApplicationCommandOptionType.String })
         sort: string = "latest",
-        @SlashOption({ name: "name", description: "Whats the character name", required: false })
+        @SlashOption({ name: "name", description: "Whats the character name", required: false, type: ApplicationCommandOptionType.String })
         name: string = "",
         interaction: CommandInteraction
     ): Promise<void> {
@@ -170,7 +170,7 @@ export abstract class CNft {
             .setPlaceholder("Select Spirits to Add")
             .setCustomId("spirit-select-menu")
 
-        spirits.filter(spirit => spirit.grade > 3).filter(spirit => !this.filter.spirits?.includes(spirit.petName)).forEach(spirit => {
+        spirits.filter(spirit => spirit.grade > 3).filter(spirit => !this.filter.spirits?.includes(spirit.petName)).slice(0, 25).forEach(spirit => {
             menu.addOptions({
                 label: spirit.petName,
                 value: spirit.petName.trim()
@@ -373,7 +373,7 @@ export abstract class CNft {
  * @param {INft} nft
  * @return {MessageOptions[]} returns a paginated message options
  */
-export function paginate(interaction: CommandInteraction, nfts: List[], nft: INft): MessageOptions[] {
+export function paginate(interaction: CommandInteraction, nfts: List[], nft: INft): BaseMessageOptions[] {
     let totalPages: number = Math.ceil(nfts.length / 9)
 
     const pages = Array.from(Array(totalPages).keys()).map((i) => {

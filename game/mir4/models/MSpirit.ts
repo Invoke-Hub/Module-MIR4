@@ -1,6 +1,6 @@
 import { List } from "../interfaces/INft";
 import { Spirit, SpiritObject } from "../interfaces/ISpirit";
-import fs from "fs"
+import * as fs from 'fs';
 import MNft from "./MNft.js";
 
 /**

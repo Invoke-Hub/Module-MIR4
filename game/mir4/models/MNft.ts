@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from "axios"
 import { AttachmentBuilder } from "discord.js"
 import { INft, List, RootObject } from "../interfaces/INft"
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js"
-import fs from "fs"
+import * as fs from 'fs';
 import MSkill from "./MSkill.js"
 import MSpirit from "./MSpirit.js"
 
