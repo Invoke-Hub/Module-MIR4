@@ -325,10 +325,10 @@ export abstract class CNft {
             if (this.filter.name && !nft.characterName.includes(this.filter.name))
                 return false
 
-            if (this.filter.spirits?.length && nft.spirits && !this.filter.spirits?.every(spirit => nft.spirits.inven.map(owned => owned.petName).includes(spirit)))
+            if (this.filter.spirits?.length && !this.filter.spirits?.every(spirit => (nft.spirits ? nft.spirits.inven.map(owned => owned.petName) : []).includes(spirit)))
                 return false
 
-            if (this.filter.skills?.length && nft.skills && !this.filter.skills?.every(skill => nft.skills.filter(owned => owned.skillName == skill && owned.skillLevel >= 8).length > 0))
+            if (this.filter.skills?.length && nft.skills && !this.filter.skills?.every(skill => (nft.skills ? nft.skills.filter(owned => owned.skillName == skill && owned.skillLevel >= 8) : []).length > 0))
                 return false
 
             return true
