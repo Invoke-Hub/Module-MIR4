@@ -57,10 +57,14 @@ export interface INft {
     priceMax: number
     sort: string
     page: number
-    languageCode: string,
-    interaction?: CommandInteraction,
+    languageCode: string
+    interaction?: CommandInteraction
     name?: string
     skills?: string[]
     spirits?: string[]
     url?: string
+}
+
+export interface INFTSession {
+    [uniqueId: string]: INft
 }

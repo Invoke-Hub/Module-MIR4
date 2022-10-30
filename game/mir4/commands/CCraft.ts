@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, ButtonInteraction, ChatInputCommandInteraction, CommandInteraction, ModalSubmitInteraction, TextChannel } from "discord.js"
 import { Discord, ModalComponent, ButtonComponent, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx"
-import { ICraft, IMaterial, IMaterials } from "../interfaces/ICraft.js";
+import { ICraft, ICraftSession, IMaterial, IMaterials } from "../interfaces/ICraft.js";
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
 import CMaterialCalculator from "../controllers/CMaterialCalculator.js"
 
@@ -15,27 +15,7 @@ import CMaterialCalculator from "../controllers/CMaterialCalculator.js"
 @SlashGroup("mir4")
 export abstract class CNft {
 
-    private _materials: ICraft = {
-        dragonMaterial: 1,
-        rarity: 1,
-        craftingMaterials: {
-            uncommon: {} as IMaterial,
-            rare: {} as IMaterial,
-            epic: {} as IMaterial,
-            legendary: {} as IMaterial
-        },
-        copper: 0,
-        darksteel: 0,
-        glitteringPowder: 0
-    }
-
-    public get materials(): ICraft {
-        return this._materials
-    }
-
-    public set materials(material) {
-        this._materials = material
-    }
+    private _filter: ICraftSession = {}
 
     /**
      * Executes the mir4 craft calculation
@@ -63,14 +43,24 @@ export abstract class CNft {
         glitteringPowder: number = 0,
         interaction: CommandInteraction
     ): Promise<void> {
-        this.materials.dragonMaterial = dragonMaterial
-        this.materials.rarity = rarity
-        this.materials.copper = copper
-        this.materials.darksteel = darksteel
-        this.materials.glitteringPowder = glitteringPowder
-        this.materials.interaction = interaction
 
-        this.buildEmbed(null)
+        let sessionId: string = this.retrieveSession(interaction);
+        this._filter[sessionId] = {
+            dragonMaterial: dragonMaterial,
+            rarity: rarity,
+            craftingMaterials: {
+                uncommon: {} as IMaterial,
+                rare: {} as IMaterial,
+                epic: {} as IMaterial,
+                legendary: {} as IMaterial
+            },
+            copper: copper,
+            darksteel: darksteel,
+            glitteringPowder: glitteringPowder,
+            interaction: interaction
+        }
+
+        this.buildEmbed(null, null, this._filter[sessionId])
     }
 
     /**
@@ -78,9 +68,9 @@ export abstract class CNft {
      *
      * @param {ModalSubmitInteraction} interaction
      */
-    buildEmbed(mode: keyof IMaterials | null, interaction: ButtonInteraction | ModalSubmitInteraction | CommandInteraction | null = null): CEmbedBuilder[] | void {
-        let calculator = new CMaterialCalculator(this.materials, new CEmbedBuilder({
-            interaction: this.materials.interaction!
+    buildEmbed(mode: keyof IMaterials | null, interaction: ButtonInteraction | ModalSubmitInteraction | CommandInteraction | null = null, materials:ICraft): CEmbedBuilder[] | void {
+        let calculator = new CMaterialCalculator(materials, new CEmbedBuilder({
+            interaction: materials.interaction!
         }));
 
         switch (mode) {
@@ -95,7 +85,7 @@ export abstract class CNft {
                 if (interaction instanceof ModalSubmitInteraction || interaction instanceof ButtonInteraction)
                     return data;
                 else
-                    this.materials.interaction!.reply({
+                    materials.interaction!.reply({
                         embeds: data,
                         files: data[1].files,
                         components: data[1].components
@@ -112,7 +102,8 @@ export abstract class CNft {
     uncommonHandler(
         interaction: ButtonInteraction
     ): void {
-        this.buildEmbed("uncommon", interaction)
+        let sessionId: string = this.retrieveSession(interaction);
+        this.buildEmbed("uncommon", interaction, this._filter[sessionId])
     }
 
     /**
@@ -124,7 +115,8 @@ export abstract class CNft {
     rareHandler(
         interaction: ButtonInteraction
     ): void {
-        this.buildEmbed("rare", interaction)
+        let sessionId: string = this.retrieveSession(interaction);
+        this.buildEmbed("rare", interaction, this._filter[sessionId])
     }
 
     /**
@@ -136,7 +128,8 @@ export abstract class CNft {
     epicHandler(
         interaction: ButtonInteraction
     ): void {
-        this.buildEmbed("epic", interaction)
+        let sessionId: string = this.retrieveSession(interaction);
+        this.buildEmbed("epic", interaction, this._filter[sessionId])
     }
 
     /**
@@ -148,7 +141,8 @@ export abstract class CNft {
     legendaryHandler(
         interaction: ButtonInteraction
     ): void {
-        this.buildEmbed("legendary", interaction)
+        let sessionId: string = this.retrieveSession(interaction);
+        this.buildEmbed("legendary", interaction, this._filter[sessionId])
     }
 
     /**
@@ -160,10 +154,10 @@ export abstract class CNft {
     clearHandler(
         interaction: ButtonInteraction
     ): void {
-        
-        this._materials = {
-            dragonMaterial: this.materials.dragonMaterial,
-            rarity: this.materials.rarity,
+        let sessionId: string = this.retrieveSession(interaction);
+        this._filter[sessionId] = {
+            dragonMaterial: this._filter[sessionId].dragonMaterial,
+            rarity: this._filter[sessionId].rarity,
             craftingMaterials: {
                 uncommon: {} as IMaterial,
                 rare: {} as IMaterial,
@@ -172,10 +166,11 @@ export abstract class CNft {
             },
             copper: 0,
             darksteel: 0,
-            glitteringPowder: 0
+            glitteringPowder: 0,
+            interaction: this._filter[sessionId].interaction
         }
 
-        let data: CEmbedBuilder[] = this.buildEmbed(null, interaction) as CEmbedBuilder[];
+        let data: CEmbedBuilder[] = this.buildEmbed(null, interaction, this._filter[sessionId]) as CEmbedBuilder[];
 
         interaction.reply({
             embeds: data,
@@ -191,20 +186,32 @@ export abstract class CNft {
      */
     @ModalComponent()
     async CraftingForm(interaction: ModalSubmitInteraction): Promise<void> {
+        let sessionId: string = this.retrieveSession(interaction);
+
         interaction.fields.fields.forEach(field => {
             let values = field.customId.split("|")
             let material: keyof IMaterial = values[0] as keyof IMaterial
             let rarity: keyof IMaterials = values[1] as keyof IMaterials
 
-            this.materials.craftingMaterials[rarity][material] = !isNaN(Number(field.value)) ? Number(field.value) : 0
+            this._filter[sessionId].craftingMaterials[rarity][material] = !isNaN(Number(field.value)) ? Number(field.value) : 0
         })
 
-        let data: CEmbedBuilder[] = this.buildEmbed(null, interaction) as CEmbedBuilder[];
+        let data: CEmbedBuilder[] = this.buildEmbed(null, interaction, this._filter[sessionId]) as CEmbedBuilder[];
         interaction.reply({
             embeds: data,
             files: data[1].files,
             components: data[1].components
         })
+    }
+
+    /**
+     * Retrieves session
+     *
+     * @param {CommandInteraction | SelectMenuInteraction | ButtonInteractio} interaction 
+     * @return string
+     */
+     private retrieveSession(interaction: CommandInteraction | ModalSubmitInteraction | ButtonInteraction): string {
+        return `${interaction.user.id}-${interaction.channelId}`
     }
 
 }

@@ -37,3 +37,7 @@ export interface ICraft {
     glitteringPowder: number
     interaction?: CommandInteraction
 }
+
+export interface ICraftSession {
+    [uniqueId: string]: ICraft
+}

@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ApplicationCommandOptionType, ButtonInteraction, CommandInteraction, MessageActionRowComponentBuilder, SelectMenuBuilder, SelectMenuInteraction } from "discord.js"
 import { ButtonComponent, Discord, SelectMenuComponent, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx"
 import { Pagination, PaginationType } from "@discordx/pagination"
-import { INft, List } from "../interfaces/INft.js"
+import { INft, INFTSession, List } from "../interfaces/INft.js"
 import { Spirit } from "../interfaces/ISpirit.js"
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js"
 import CRetrieveNft from "../controllers/CRetrieveNft.js"
@@ -21,30 +21,7 @@ import MNft from "../models/MNft.js"
 @SlashGroup("mir4")
 export abstract class CNft {
 
-    private _filter: INft = {
-        listType: "sale",
-        class: 0,
-        levMin: 0,
-        levMax: 0,
-        powerMin: 0,
-        powerMax: 0,
-        priceMin: 0,
-        priceMax: 0,
-        sort: "latest",
-        page: 1,
-        languageCode: "en",
-        name: "",
-        skills: [],
-        spirits: []
-    }
-
-    public get filter(): INft {
-        return this._filter
-    }
-
-    public set filter(filter) {
-        this._filter = filter
-    }
+    private _filter: INFTSession = {}
 
     /**
      * Executes the mir4 nft search
@@ -87,18 +64,26 @@ export abstract class CNft {
     ): Promise<void> {
         await interaction.deferReply()
 
-        this.filter.class = playerClass
-        this.filter.levMin = minimumLevel
-        this.filter.levMax = maximumlevel
-        this.filter.powerMin = minimumps
-        this.filter.powerMax = maximumps
-        this.filter.priceMin = minimumprice
-        this.filter.priceMax = maximumprice
-        this.filter.sort = sort
-        this.filter.interaction = interaction
-        this.filter.name = name
+        let sessionId: string = this.retrieveSession(interaction);
+        this._filter[sessionId] = {
+            listType: "sale",
+            class: playerClass,
+            levMin: minimumLevel,
+            levMax: maximumlevel,
+            powerMin: minimumps,
+            powerMax: maximumps,
+            priceMin: minimumprice,
+            priceMax: maximumprice,
+            sort: sort,
+            page: 1,
+            languageCode: "en",
+            name: name,
+            skills: [],
+            spirits: [],
+            interaction: interaction
+        }
 
-        this.createFilter()
+        this.createFilter(this._filter[sessionId])
     }
 
     /**
@@ -143,14 +128,15 @@ export abstract class CNft {
     ): Promise<unknown> {
         await interaction.deferReply()
 
-        if (!this.filter.spirits?.length) {
+        let sessionId: string = this.retrieveSession(interaction);
+        if (!this._filter[sessionId].spirits?.length) {
             return interaction.followUp("There are no filtered spirits.")
         }
 
         interaction.deleteReply()
 
-        this._filter.spirits = []
-        this.createFilter()
+        this._filter[sessionId].spirits = []
+        this.createFilter(this._filter[sessionId])
     }
 
     /**
@@ -162,7 +148,8 @@ export abstract class CNft {
     spiritHandler(
         interaction: ButtonInteraction
     ): void {
-        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/Spirits-${this.filter.languageCode}.json`, 'utf-8')
+        let sessionId: string = this.retrieveSession(interaction);
+        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/spirits/Spirits-${this._filter[sessionId].languageCode}.json`, 'utf-8')
         let data = JSON.parse(file.toString())
         let spirits = data as Spirit[]
 
@@ -170,7 +157,7 @@ export abstract class CNft {
             .setPlaceholder("Select Spirits to Add")
             .setCustomId("spirit-select-menu")
 
-        spirits.filter(spirit => spirit.grade > 3).filter(spirit => !this.filter.spirits?.includes(spirit.petName)).slice(0, 25).forEach(spirit => {
+        spirits.filter(spirit => spirit.grade > 3).filter(spirit => !this._filter[sessionId].spirits?.includes(spirit.petName)).slice(0, 25).forEach(spirit => {
             menu.addOptions({
                 label: spirit.petName,
                 value: spirit.petName.trim()
@@ -205,8 +192,9 @@ export abstract class CNft {
 
         interaction.deleteReply()
 
-        this.filter.spirits?.push(spirit)
-        this.createFilter()
+        let sessionId: string = this.retrieveSession(interaction);
+        this._filter[sessionId].spirits?.push(spirit)
+        this.createFilter(this._filter[sessionId])
     }
 
     /**
@@ -219,15 +207,16 @@ export abstract class CNft {
         interaction: ButtonInteraction
     ): Promise<unknown> {
         await interaction.deferReply()
+        let sessionId: string = this.retrieveSession(interaction);
 
-        if (!this.filter.skills?.length) {
+        if (!this._filter[sessionId].skills?.length) {
             return interaction.followUp("There are no filtered skills.")
         }
 
         interaction.deleteReply()
 
-        this._filter.skills = []
-        this.createFilter()
+        this._filter[sessionId].skills = []
+        this.createFilter(this._filter[sessionId])
     }
 
     /**
@@ -239,8 +228,9 @@ export abstract class CNft {
     skillHandler(
         interaction: ButtonInteraction
     ): void {
-        let nft: MNft = new MNft(this._filter)
-        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/skills/${nft.className(this.filter.class)}-${this.filter.languageCode}.json`, 'utf-8')
+        let sessionId: string = this.retrieveSession(interaction);
+        let nft: MNft = new MNft(this._filter[sessionId])
+        let file = fs.readFileSync(`${process.cwd()}/src/modules/game/mir4/resources/data/skills/${nft.className(this._filter[sessionId].class)}-${this._filter[sessionId].languageCode}.json`, 'utf-8')
         let data = JSON.parse(file.toString())
         let skills = data as Skill[]
 
@@ -248,7 +238,7 @@ export abstract class CNft {
             .setPlaceholder("Select Skills to Add")
             .setCustomId("skill-select-menu")
 
-        skills.filter(skill => !this.filter.skills?.includes(skill.skillName)).forEach(skill => {
+        skills.filter(skill => !this._filter[sessionId].skills?.includes(skill.skillName)).forEach(skill => {
             menu.addOptions({
                 label: skill.skillName,
                 value: skill.skillName.trim()
@@ -275,6 +265,7 @@ export abstract class CNft {
         interaction: SelectMenuInteraction
     ): Promise<unknown> {
         await interaction.deferReply()
+        let sessionId: string = this.retrieveSession(interaction);
 
         const skill = interaction.values?.[0]
         if (!skill) {
@@ -283,15 +274,25 @@ export abstract class CNft {
 
         interaction.deleteReply()
 
-        this.filter.skills?.push(skill)
-        this.createFilter()
+        this._filter[sessionId].skills?.push(skill)
+        this.createFilter(this._filter[sessionId])
+    }
+
+    /**
+     * Retrieves session
+     *
+     * @param {CommandInteraction | SelectMenuInteraction | ButtonInteractio} interaction 
+     * @return string
+     */
+    private retrieveSession(interaction: CommandInteraction | SelectMenuInteraction | ButtonInteraction): string {
+        return `${interaction.user.id}-${interaction.channelId}`
     }
 
     /**
      * Creates search criteria
      */
-    createFilter() {
-        let path: string = `${process.cwd()}/src/modules/game/mir4/resources/data/users/Players-${this.filter.languageCode}.json`;
+    createFilter(filter: INft) {
+        let path: string = `${process.cwd()}/src/modules/game/mir4/resources/data/users/Players-${filter.languageCode}.json`;
         if (!fs.existsSync(path))
             fs.createWriteStream(path);
 
@@ -301,39 +302,39 @@ export abstract class CNft {
 
         nfts = nfts.filter((nft: List) => {
 
-            if (this.filter.class && nft.class != this.filter.class)
+            if (filter.class && nft.class != filter.class)
                 return false
 
-            if (this.filter.levMin && nft.lv < this.filter.levMin)
+            if (filter.levMin && nft.lv < filter.levMin)
                 return false
 
-            if (this.filter.levMax && nft.lv > this.filter.levMax)
+            if (filter.levMax && nft.lv > filter.levMax)
                 return false
 
-            if (this.filter.powerMin && nft.powerScore < this.filter.powerMin)
+            if (filter.powerMin && nft.powerScore < filter.powerMin)
                 return false
 
-            if (this.filter.powerMax && nft.powerScore > this.filter.powerMax)
+            if (filter.powerMax && nft.powerScore > filter.powerMax)
                 return false
 
-            if (this.filter.priceMin && nft.price < this.filter.priceMin)
+            if (filter.priceMin && nft.price < filter.priceMin)
                 return false
 
-            if (this.filter.priceMax && nft.price > this.filter.priceMax)
+            if (filter.priceMax && nft.price > filter.priceMax)
                 return false
 
-            if (this.filter.name && !nft.characterName.includes(this.filter.name))
+            if (filter.name && !nft.characterName.includes(filter.name))
                 return false
 
-            if (this.filter.spirits?.length && !this.filter.spirits?.every(spirit => (nft.spirits ? nft.spirits.inven.map(owned => owned.petName) : []).includes(spirit)))
+            if (filter.spirits?.length && !filter.spirits?.every(spirit => (nft.spirits ? nft.spirits.inven.map(owned => owned.petName) : []).includes(spirit)))
                 return false
 
-            if (this.filter.skills?.length && nft.skills && !this.filter.skills?.every(skill => (nft.skills ? nft.skills.filter(owned => owned.skillName == skill && owned.skillLevel >= 8) : []).length > 0))
+            if (filter.skills?.length && nft.skills && !filter.skills?.every(skill => (nft.skills ? nft.skills.filter(owned => owned.skillName == skill && owned.skillLevel >= 8) : []).length > 0))
                 return false
 
             return true
         }).sort((nft1: List, nft2: List) => {
-            switch (this.filter.sort) {
+            switch (filter.sort) {
                 case "latest":
                     return nft1.seq <= nft2.seq ? 1 : -1
                 case "oldest":
@@ -350,16 +351,16 @@ export abstract class CNft {
             return 1
         })
 
-        if (!this.filter.interaction) {
+        if (!filter.interaction) {
             return
         }
 
         if (!nfts.length) {
-            this.filter.interaction.followUp("No results found.")
+            filter.interaction.followUp("No results found.")
             return
         }
 
-        new Pagination(this.filter.interaction, paginate(this.filter.interaction, nfts, this.filter), {
+        new Pagination(filter.interaction, paginate(filter.interaction, nfts, filter), {
             type: PaginationType.SelectMenu,
         }).send()
     }
