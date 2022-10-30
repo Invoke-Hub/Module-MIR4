@@ -1,4 +1,4 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder, ButtonInteraction, APIEmbedField } from "discord.js";
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder, ButtonInteraction, APIEmbedField, AttachmentBuilder } from "discord.js";
 import { ICraft, IMaterial, IMaterials } from "../interfaces/ICraft.js"
 import CEmbedBuilder from "../../../main/utilities/embedbuilder/controllers/CEmbedBuilder.js";
 import MCraft from "../models/MCraft.js"
@@ -34,6 +34,7 @@ export default class CMaterialCalculator extends MCraft {
             .setTitle(`Devil Dampyo`)
             .setDescription(`Hey lets craft! I see you have choosen the material **${this.dragonMaterial}**, Lets start adding your materials and see what you lack!`)
             .setColor("Blue")
+            .setThumbnail('attachment://profile-image.png')
 
         let oFields: APIEmbedField[] = [];
         let rFields: APIEmbedField[] = [];
@@ -78,13 +79,13 @@ export default class CMaterialCalculator extends MCraft {
 
                     oFields.push({
                         name: `${this.readableName(oItem)} ${this.emojiRarity(rarity)}`,
-                        value: "```" + this.readableName(rarity) + "``` ```x" + oMaterial[oItem]!.toLocaleString() + "```",
+                        value: "```" + this.readableName(rarity) + "``` ```x" + this.readableNumber(oMaterial[oItem]!).toLocaleString() + "```",
                         inline: true
                     })
 
                     rFields.push({
                         name: `${this.readableName(oItem)} ${this.emojiRarity(rarity)}`,
-                        value: "```" + this.readableName(rarity) + "``` ```x" + craftedMaterial.toLocaleString() + "```",
+                        value: "```" + this.readableName(rarity) + "``` ```x" + this.readableNumber(craftedMaterial).toLocaleString() + "```",
                         inline: true
                     })
                 }
@@ -96,32 +97,32 @@ export default class CMaterialCalculator extends MCraft {
             value: "```OWNED CURRENCY```",
             inline: false
         }).addFields({
-            name: "Copper",
-            value: "```" + this.craft.copper.toLocaleString() + "```",
+            name: `Copper ${this.materialIcon("copper")}`,
+            value: "```" + this.readableNumber(this.craft.copper).toLocaleString() + "```",
             inline: true
         }).addFields({
-            name: "Dark Steel",
-            value: "```" + this.craft.darksteel.toLocaleString() + "```",
+            name: `Dark Steel ${this.materialIcon("darksteel")}`,
+            value: "```" + this.readableNumber(this.craft.darksteel).toLocaleString() + "```",
             inline: true
         }).addFields({
-            name: "Glittering Powder",
-            value: "```" + this.craft.glitteringPowder.toLocaleString() + "```",
+            name: `Glittering Powder ${this.materialIcon("glitteringpowder")}`,
+            value: "```" + this.readableNumber(this.craft.glitteringPowder).toLocaleString() + "```",
             inline: true
         }).addFields({
             name: "ㅤ",
             value: "```REQUIRED CURERENCY```",
             inline: false
         }).addFields({
-            name: "Copper",
-            value: "```" + (this.craftingRequirement[this.craft.rarity].copper - this.craft.copper).toLocaleString() + "```",
+            name: `Copper ${this.materialIcon("copper")}`,
+            value: "```" + (this.readableNumber(this.craftingRequirement[this.craft.rarity].copper - this.craft.copper)).toLocaleString() + "```",
             inline: true
         }).addFields({
-            name: "Dark Steel",
-            value: "```" + (this.craftingRequirement[this.craft.rarity].darksteel - this.craft.darksteel).toLocaleString() + "```",
+            name: `Dark Steel ${this.materialIcon("darksteel")}`,
+            value: "```" + (this.readableNumber(this.craftingRequirement[this.craft.rarity].darksteel - this.craft.darksteel)).toLocaleString() + "```",
             inline: true
         }).addFields({
-            name: "Glittering Powder",
-            value: "```" + (this.craftingRequirement[this.craft.rarity].glitteringPowder - this.craft.glitteringPowder).toLocaleString() + "```",
+            name: `Glittering Powder ${this.materialIcon("glitteringpowder")}`,
+            value: "```" + (this.readableNumber(this.craftingRequirement[this.craft.rarity].glitteringPowder - this.craft.glitteringPowder)).toLocaleString() + "```",
             inline: true
         })
         this._builders.push(currencyEmbed);
@@ -130,6 +131,8 @@ export default class CMaterialCalculator extends MCraft {
             .setDescription("Below are the owned and required materials for **" + this.dragonMaterial + "**, I have sorted them out for you to see it clearly.\n\n```OWNED MATERIALS```")
             .setFooter({ text: `Dampyo`, iconURL: "https://www.dampyo.com/_next/image?url=%2Fimages%2Fdampyo.png&w=256&q=75" })
             .setColor("Blue")
+        
+        materialEmbed.files = [new AttachmentBuilder(`${process.cwd()}/src/modules/game/mir4/resources/images/MIR4Dampyo.png`, { name: 'profile-image.png' })]
 
         materialEmbed.addFields(oFields).addFields({
             name: "ㅤ",

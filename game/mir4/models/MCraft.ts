@@ -133,17 +133,8 @@ export default class MCraft {
         return this._rarities
     }
 
-    get craftingRequirement() : ICraft[] {
+    get craftingRequirement(): ICraft[] {
         return this._craftingRequirement
-    }
-
-    emojiRarity(name: string): string {
-        switch (name) {
-            case "uncommon": return "<:Valorant7Ascendant:1003600780827308062>"
-            case "rare": return "<:Valorant5Platinum:1003600591248961586>"
-            case "epic": return "<:Valorant8Immortal:1003600824049619037>"
-            default: return "<:Valorant4Gold:1003600546382483476>"
-        }
     }
 
     get dragonMaterial(): string {
@@ -154,10 +145,6 @@ export default class MCraft {
             case 4: return "Dragon Horn";
             default: return "Dragon Eye";
         }
-    }
-
-    readableName(name: string): string {
-        return (name.charAt(0).toUpperCase() + name.slice(1)).replace(/([A-Z])/g, ' $1').trim();
     }
 
     get requirements(): IMaterials {
@@ -197,6 +184,55 @@ export default class MCraft {
         });
 
         return requirements
+    }
+
+    /**
+     * Retrieves readable name
+     *
+     * @param {string} name
+     * @return {string} readable name
+     */
+    readableName(name: string): string {
+        return (name.charAt(0).toUpperCase() + name.slice(1)).replace(/([A-Z])/g, ' $1').trim();
+    }
+
+    /**
+     * Retrieves readable number
+     *
+     * @param {string} number
+     * @return {string} readable number
+     */
+    readableNumber(value: number): number {
+        return value < 0 ? 0 : value
+    }
+
+    /**
+     * Retrieves rarity emoji
+     *
+     * @param {string} material
+     * @return {string} rarity emoji for embed
+     */
+    emojiRarity(name: string): string {
+        switch (name) {
+            case "epic": return "<:ColorCFR:1006526139566657606>"
+            case "rare": return "<:ColorCTB:1006526149788180551>"
+            case "uncommon": return "<:ColorCLG:1006526143526080602>"
+            default: return "<:ColorCGP:1006526141345058846>"
+        }
+    }
+
+    /**
+     * Retrieves material emoji
+     *
+     * @param {string} material
+     * @return {string} material emoji for embed
+     */
+    materialIcon(classId: string): string {
+        switch (classId) {
+            case "copper": return "<:MIR4Copper:1036166457660289104>"
+            case "darksteel": return "<:MIR4DarkSteel:1036166459476410478>"
+            default: return "<:MIR4GlitteringPowder:1036166462483738674>"
+        }
     }
 
 }
