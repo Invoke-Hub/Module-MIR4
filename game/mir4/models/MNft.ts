@@ -211,7 +211,7 @@ export default class MNft {
                 let skillModule: MSkill = new MSkill(this)
 
                 for (let i = 1; i <= totalPages; i++) {
-                    console.log(`${i} of ${totalPages}`)
+                    console.log(`Retrieving MIR4 NFT Characters: ${i} of ${totalPages}`)
                     filter.page = i
 
                     await this.requestData(this.requestList(filter)).then(async response => {
@@ -227,7 +227,7 @@ export default class MNft {
                 }
 
                 if (notify) {
-                    embed.files = [new AttachmentBuilder(`${process.cwd()}/src/modules/game/mir4/resources/images/banner.gif`, { name: 'profile-image.gif' })]
+                    embed.files = [new AttachmentBuilder(`${process.cwd()}/src/modules/game/mir4/resources/images/Banner.gif`, { name: 'profile-image.gif' })]
                     embed
                         .setTitle(`MIR4 NFT Retrieve`)
                         .setDescription("Fetched " + nfts.data.totalCount + " NFTs as of " + new Date().toUTCString() + ", CRON will run again after 5 minutes.")
